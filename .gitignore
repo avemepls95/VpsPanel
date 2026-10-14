@@ -1,0 +1,9 @@
+bin/
+obj/
+.vs/
+.idea/
+*.user
+node_modules/
+src/VpsPanel/wwwroot/
+publish/
+.dev-data/
