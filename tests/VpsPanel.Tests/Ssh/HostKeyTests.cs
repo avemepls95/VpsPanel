@@ -16,7 +16,7 @@ public sealed class HostKeyTests(SshServerFixture fixture) : IDisposable
         // Arrange
         var server = fixture.Server.Server();
         var store = TestSettings.Store(_dir, server);
-        var connector = new SshConnector(store);
+        var connector = new SshConnector(store, SsmOptions.Default);
 
         // Act
         await using var session = await connector.Connect(server, CancellationToken.None);
@@ -31,7 +31,7 @@ public sealed class HostKeyTests(SshServerFixture fixture) : IDisposable
         // Arrange
         var server = fixture.Server.Server("Main");
         server.HostKeyFingerprint = "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-        var connector = new SshConnector(TestSettings.Store(_dir, server));
+        var connector = new SshConnector(TestSettings.Store(_dir, server), SsmOptions.Default);
 
         // Act
         var act = () => connector.Connect(server, CancellationToken.None);
@@ -49,7 +49,7 @@ public sealed class HostKeyTests(SshServerFixture fixture) : IDisposable
         var server = fixture.Server.Server();
         server.Host = "127.0.0.1";
         server.Port = TestNetwork.FreeTcpPort();
-        var connector = new SshConnector(TestSettings.Store(_dir, server));
+        var connector = new SshConnector(TestSettings.Store(_dir, server), SsmOptions.Default);
 
         // Act
         var act = () => connector.Connect(server, CancellationToken.None);
@@ -66,7 +66,7 @@ public sealed class HostKeyTests(SshServerFixture fixture) : IDisposable
         // Arrange
         var server = fixture.Server.Server();
         server.KeyPath = Path.Combine(_dir.Path, "missing.pem");
-        var connector = new SshConnector(TestSettings.Store(_dir, server));
+        var connector = new SshConnector(TestSettings.Store(_dir, server), SsmOptions.Default);
 
         // Act
         var act = () => connector.Connect(server, CancellationToken.None);

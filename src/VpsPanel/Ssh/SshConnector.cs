@@ -5,15 +5,26 @@ using ConnectionInfo = Renci.SshNet.ConnectionInfo;
 
 namespace VpsPanel.Ssh;
 
-internal sealed class SshConnector(ISettingsStore settings) : ISshConnector
+internal sealed class SshConnector(ISettingsStore settings, SsmOptions ssmOptions) : ISshConnector
 {
     public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
 
     public async Task<ISshSession> Connect(ServerSettings server, CancellationToken ct, TimeSpan? timeout = null)
     {
-        var info = CreateConnectionInfo(server, timeout ?? DefaultTimeout);
+        var key = ReadKey(server.KeyPath);
+        var tunnel = server.Ssm is { } ssm ? await SsmTunnel.Start(ssm, server.Port, ssmOptions, ct) : null;
+        var info = new ConnectionInfo(
+            tunnel is null ? server.Host : "127.0.0.1",
+            tunnel?.LocalPort ?? server.Port,
+            server.User,
+            new PrivateKeyAuthenticationMethod(server.User, key))
+        {
+            Timeout = timeout ?? DefaultTimeout
+        };
+        // SSM ends a session after its idle timeout, so a command that prints nothing for a long time would lose the connection.
+        var keepAlive = tunnel is null ? Timeout.InfiniteTimeSpan : ssmOptions.KeepAliveInterval;
         var verifier = new HostKeyVerifier(server, settings);
-        var ssh = new SshClient(info);
+        var ssh = new SshClient(info) { KeepAliveInterval = keepAlive };
         ssh.HostKeyReceived += verifier.Handle;
         try
         {
@@ -22,39 +33,35 @@ internal sealed class SshConnector(ISettingsStore settings) : ISshConnector
         catch (Exception e)
         {
             ssh.Dispose();
+            if (tunnel is not null)
+                await tunnel.DisposeAsync();
             if (ct.IsCancellationRequested)
                 throw;
             if (verifier.Mismatch)
                 throw new HostKeyMismatchException(server.Name, verifier.ReceivedFingerprint!);
             throw new SshUnavailableException(Describe(e, info.Timeout));
         }
-        return new SshSession(ssh, token => ConnectSftp(info, verifier, token));
+        return new SshSession(ssh, token => ConnectSftp(info, keepAlive, verifier, token), tunnel);
     }
 
-    private static ConnectionInfo CreateConnectionInfo(ServerSettings server, TimeSpan timeout)
+    private static PrivateKeyFile ReadKey(string keyPath)
     {
-        if (!File.Exists(server.KeyPath))
-            throw new PanelException(400, $"Key file not found: {server.KeyPath}");
+        if (!File.Exists(keyPath))
+            throw new PanelException(400, $"Key file not found: {keyPath}");
 
-        PrivateKeyFile key;
         try
         {
-            key = new PrivateKeyFile(server.KeyPath);
+            return new PrivateKeyFile(keyPath);
         }
         catch (Exception e) when (e is SshException or IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         {
-            throw new PanelException(400, $"Could not read key {server.KeyPath}: {e.Message}");
+            throw new PanelException(400, $"Could not read key {keyPath}: {e.Message}");
         }
-
-        return new ConnectionInfo(server.Host, server.Port, server.User, new PrivateKeyAuthenticationMethod(server.User, key))
-        {
-            Timeout = timeout
-        };
     }
 
-    private static async Task<SftpClient> ConnectSftp(ConnectionInfo info, HostKeyVerifier verifier, CancellationToken ct)
+    private static async Task<SftpClient> ConnectSftp(ConnectionInfo info, TimeSpan keepAlive, HostKeyVerifier verifier, CancellationToken ct)
     {
-        var sftp = new SftpClient(info);
+        var sftp = new SftpClient(info) { KeepAliveInterval = keepAlive };
         sftp.HostKeyReceived += verifier.Handle;
         try
         {

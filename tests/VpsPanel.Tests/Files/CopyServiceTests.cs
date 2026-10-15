@@ -18,7 +18,7 @@ public sealed class CopyServiceTests(TwoSshServersFixture fixture) : IDisposable
         var first = fixture.First.Server("First");
         var second = fixture.Second.Server("Second");
         var store = TestSettings.Store(_dir, first, second);
-        var service = new CopyService(store, new SshConnector(store), new RunManager(TimeProvider.System),
+        var service = new CopyService(store, new SshConnector(store, SsmOptions.Default), new RunManager(TimeProvider.System),
             new BackupStore(new SettingsPaths(_dir.Path), TimeProvider.System));
         return (service, first, second);
     }

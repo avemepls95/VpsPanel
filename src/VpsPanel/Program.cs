@@ -29,6 +29,10 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(sp =>
     new SettingsPaths(Path.GetFullPath(sp.GetRequiredService<IConfiguration>()["VpsPanel:DataDir"] ?? SettingsPaths.Default, launchDir)));
 builder.Services.AddSingleton<ISettingsStore, SettingsStore>();
+builder.Services.AddSingleton(sp => SsmOptions.Default with
+{
+    AwsCliPath = sp.GetRequiredService<IConfiguration>()["VpsPanel:AwsCliPath"] ?? SsmOptions.Default.AwsCliPath
+});
 builder.Services.AddSingleton<ISshConnector, SshConnector>();
 builder.Services.AddSingleton<OverviewService>();
 builder.Services.AddHttpClient<IProviderLookup, IpInfoProviderLookup>(c => c.Timeout = TimeSpan.FromSeconds(10));

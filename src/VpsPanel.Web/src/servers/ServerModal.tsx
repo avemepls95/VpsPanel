@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Code, Group, Modal, NumberInput, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
+import { Button, Code, Group, Input, Modal, NumberInput, SegmentedControl, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
 import { api } from '../api/endpoints';
 import type { ServerView } from '../api/types';
 import { ConfirmModal } from '../common/ConfirmModal';
@@ -14,6 +14,8 @@ interface Props {
 
 const monospace = { input: { fontFamily: 'var(--mantine-font-family-monospace)' } };
 
+type Connection = 'ssh' | 'ssm';
+
 export function ServerModal({ server, onClose, onSaved, onChanged }: Props) {
   const [current, setCurrent] = useState(server);
   const [name, setName] = useState(server?.name ?? '');
@@ -21,6 +23,10 @@ export function ServerModal({ server, onClose, onSaved, onChanged }: Props) {
   const [port, setPort] = useState<number | string>(server?.port ?? 22);
   const [user, setUser] = useState(server?.user ?? 'root');
   const [keyPath, setKeyPath] = useState(server?.keyPath ?? '');
+  const [connection, setConnection] = useState<Connection>(server?.ssm ? 'ssm' : 'ssh');
+  const [instanceId, setInstanceId] = useState(server?.ssm?.instanceId ?? '');
+  const [awsProfile, setAwsProfile] = useState(server?.ssm?.profile ?? '');
+  const [awsRegion, setAwsRegion] = useState(server?.ssm?.region ?? '');
   const [provider, setProvider] = useState(server?.provider?.name ?? '');
   const [busy, setBusy] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -38,7 +44,10 @@ export function ServerModal({ server, onClose, onSaved, onChanged }: Props) {
 
   // The backend treats the hosting name as entered manually only if it differs from the saved one.
   const save = () => run('save', async () => {
-    const body = { name, host, port: Number(port), user, keyPath, providerName: provider.trim() || null };
+    const ssm = connection === 'ssm'
+      ? { instanceId, profile: awsProfile.trim() || null, region: awsRegion.trim() || null }
+      : null;
+    const body = { name, host: ssm ? '' : host, port: Number(port), user, keyPath, providerName: provider.trim() || null, ssm };
     if (current) await api.updateServer(current.id, body);
     else await api.createServer(body);
     onSaved();
@@ -66,11 +75,47 @@ export function ServerModal({ server, onClose, onSaved, onChanged }: Props) {
       <Modal opened onClose={onClose} centered radius="lg" size="lg" title={current ? `Server "${current.name}"` : 'New server'}>
         <Stack>
           <TextInput label="Name" value={name} onChange={(e) => setName(e.currentTarget.value)} data-autofocus />
+          <Input.Wrapper label="Connection">
+            <SegmentedControl
+              fullWidth
+              value={connection}
+              onChange={(value) => setConnection(value as Connection)}
+              data={[{ value: 'ssh', label: 'SSH' }, { value: 'ssm', label: 'AWS SSM' }]}
+            />
+          </Input.Wrapper>
           <SimpleGrid cols={{ base: 1, sm: 3 }}>
-            <TextInput label="Address" value={host} onChange={(e) => setHost(e.currentTarget.value)} styles={monospace} />
+            {connection === 'ssh' ? (
+              <TextInput label="Address" value={host} onChange={(e) => setHost(e.currentTarget.value)} styles={monospace} />
+            ) : (
+              <TextInput
+                label="Instance ID"
+                placeholder="i-0123456789abcdef0"
+                value={instanceId}
+                onChange={(e) => setInstanceId(e.currentTarget.value)}
+                styles={monospace}
+              />
+            )}
             <NumberInput label="Port" value={port} onChange={setPort} min={1} max={65535} styles={monospace} />
             <TextInput label="User" value={user} onChange={(e) => setUser(e.currentTarget.value)} styles={monospace} />
           </SimpleGrid>
+          {connection === 'ssm' && (
+            <SimpleGrid cols={{ base: 1, sm: 2 }}>
+              <TextInput
+                label="AWS profile"
+                placeholder="default"
+                value={awsProfile}
+                onChange={(e) => setAwsProfile(e.currentTarget.value)}
+                styles={monospace}
+              />
+              <TextInput
+                label="AWS region"
+                placeholder="default"
+                value={awsRegion}
+                onChange={(e) => setAwsRegion(e.currentTarget.value)}
+                styles={monospace}
+              />
+            </SimpleGrid>
+          )}
           <TextInput
             label="SSH key path"
             placeholder="%USERPROFILE%\.ssh\id_ed25519"

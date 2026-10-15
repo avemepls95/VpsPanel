@@ -21,7 +21,7 @@ public sealed class FilesDownloadTests(SshServerFixture fixture) : IDisposable
         var server = fixture.Server.Server();
         var store = TestSettings.Store(_dir, server);
         var backups = new BackupStore(new SettingsPaths(_dir.Path), TimeProvider.System);
-        return (new FileService(store, new SshConnector(store), backups), server);
+        return (new FileService(store, new SshConnector(store, SsmOptions.Default), backups), server);
     }
 
     private static DefaultHttpContext Http()

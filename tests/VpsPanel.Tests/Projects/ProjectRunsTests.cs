@@ -16,7 +16,7 @@ public sealed class ProjectRunsTests(SshServerFixture fixture) : IDisposable
 
     private static ProjectService CreateService(SettingsStore store)
     {
-        var connector = new SshConnector(store);
+        var connector = new SshConnector(store, SsmOptions.Default);
         return new ProjectService(store, connector, new OverviewService(store, connector), new RunManager(TimeProvider.System));
     }
 

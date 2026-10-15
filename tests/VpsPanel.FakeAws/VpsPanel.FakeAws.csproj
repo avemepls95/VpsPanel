@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>aws</AssemblyName>
+    <RootNamespace>VpsPanel.FakeAws</RootNamespace>
+  </PropertyGroup>
+
+</Project>

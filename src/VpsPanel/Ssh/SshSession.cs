@@ -3,7 +3,8 @@ using Renci.SshNet;
 
 namespace VpsPanel.Ssh;
 
-internal sealed class SshSession(SshClient ssh, Func<CancellationToken, Task<SftpClient>> connectSftp) : ISshSession
+internal sealed class SshSession(SshClient ssh, Func<CancellationToken, Task<SftpClient>> connectSftp, IAsyncDisposable? tunnel)
+    : ISshSession
 {
     private SftpClient? _sftp;
 
@@ -42,11 +43,12 @@ internal sealed class SshSession(SshClient ssh, Func<CancellationToken, Task<Sft
     public async Task<Stream> OpenWrite(string path, bool createNew, CancellationToken ct) =>
         await (await Sftp(ct)).OpenAsync(path, createNew ? FileMode.CreateNew : FileMode.Create, FileAccess.Write, ct);
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         _sftp?.Dispose();
         ssh.Dispose();
-        return ValueTask.CompletedTask;
+        if (tunnel is not null)
+            await tunnel.DisposeAsync();
     }
 
     private async Task<SftpClient> Sftp(CancellationToken ct) => _sftp ??= await connectSftp(ct);

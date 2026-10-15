@@ -113,7 +113,7 @@ export function ServerCard({ server, state, onRefresh, onEdit }: Props) {
             <Group gap="4px 12px" align="baseline">
               <Text fz={20} fw={700}>{server.name}</Text>
               <Text ff="monospace" size="sm" c="dimmed">
-                {server.user}@{server.host}{server.port === 22 ? '' : `:${server.port}`}
+                {server.user}@{server.ssm?.instanceId ?? server.host}{server.port === 22 ? '' : `:${server.port}`}{server.ssm ? ' via SSM' : ''}
               </Text>
               {server.provider && <Badge color="dark" radius="sm" tt="none">{server.provider.name}</Badge>}
             </Group>

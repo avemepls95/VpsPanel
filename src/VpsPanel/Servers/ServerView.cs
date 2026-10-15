@@ -10,8 +10,9 @@ internal sealed record ServerView(
     string User,
     string KeyPath,
     ProviderInfo? Provider,
-    string? HostKeyFingerprint)
+    string? HostKeyFingerprint,
+    SsmSettings? Ssm)
 {
     public static ServerView From(ServerSettings server) =>
-        new(server.Id, server.Name, server.Host, server.Port, server.User, server.KeyPath, server.Provider, server.HostKeyFingerprint);
+        new(server.Id, server.Name, server.Host, server.Port, server.User, server.KeyPath, server.Provider, server.HostKeyFingerprint, server.Ssm);
 }

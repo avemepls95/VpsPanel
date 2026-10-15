@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\VpsPanel\VpsPanel.csproj" />
+    <ProjectReference Include="..\VpsPanel.FakeAws\VpsPanel.FakeAws.csproj" />
   </ItemGroup>
 
   <ItemGroup>

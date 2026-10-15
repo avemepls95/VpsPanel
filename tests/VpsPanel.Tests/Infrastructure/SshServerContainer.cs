@@ -48,6 +48,20 @@ internal sealed class SshServerContainer : IAsyncDisposable
     };
 
     /// <summary>
+    /// A server that is reached through the fake aws, which forwards connections to this container.
+    /// </summary>
+    public ServerSettings SsmServer(string name = "test") => new()
+    {
+        Id = Guid.NewGuid().ToString("N"),
+        Name = name,
+        Host = "",
+        Port = 22,
+        User = "root",
+        KeyPath = KeyPath,
+        Ssm = new SsmSettings("i-0123456789abcdef0", null, null)
+    };
+
+    /// <summary>
     /// Runs a command in the container through docker exec, bypassing the SSH code under test.
     /// </summary>
     public async Task<string> Run(string bashCommand)

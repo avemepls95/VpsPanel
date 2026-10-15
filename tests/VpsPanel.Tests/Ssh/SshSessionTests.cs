@@ -16,7 +16,7 @@ public sealed class SshSessionTests(SshServerFixture fixture) : IDisposable
     {
         // Arrange
         var server = fixture.Server.Server();
-        var connector = new SshConnector(TestSettings.Store(_dir, server));
+        var connector = new SshConnector(TestSettings.Store(_dir, server), SsmOptions.Default);
         await using var session = await connector.Connect(server, CancellationToken.None);
 
         // Act
@@ -31,7 +31,7 @@ public sealed class SshSessionTests(SshServerFixture fixture) : IDisposable
     {
         // Arrange
         var server = fixture.Server.Server();
-        var connector = new SshConnector(TestSettings.Store(_dir, server));
+        var connector = new SshConnector(TestSettings.Store(_dir, server), SsmOptions.Default);
         await using var session = await connector.Connect(server, CancellationToken.None);
         var lines = new List<string>();
 
@@ -60,7 +60,7 @@ public sealed class SshSessionTests(SshServerFixture fixture) : IDisposable
     {
         // Arrange
         var server = fixture.Server.Server();
-        var connector = new SshConnector(TestSettings.Store(_dir, server));
+        var connector = new SshConnector(TestSettings.Store(_dir, server), SsmOptions.Default);
         await using var session = await connector.Connect(server, CancellationToken.None);
 
         // Act
@@ -75,7 +75,7 @@ public sealed class SshSessionTests(SshServerFixture fixture) : IDisposable
     {
         // Arrange
         var server = fixture.Server.Server();
-        var connector = new SshConnector(TestSettings.Store(_dir, server));
+        var connector = new SshConnector(TestSettings.Store(_dir, server), SsmOptions.Default);
         await using var session = await connector.Connect(server, CancellationToken.None);
         using var stdout = new MemoryStream();
 
@@ -93,7 +93,7 @@ public sealed class SshSessionTests(SshServerFixture fixture) : IDisposable
         // Arrange
         await fixture.Server.Run("printf old-content > /tmp/mode-test && chmod 600 /tmp/mode-test");
         var server = fixture.Server.Server();
-        var connector = new SshConnector(TestSettings.Store(_dir, server));
+        var connector = new SshConnector(TestSettings.Store(_dir, server), SsmOptions.Default);
         await using var session = await connector.Connect(server, CancellationToken.None);
 
         // Act
@@ -111,7 +111,7 @@ public sealed class SshSessionTests(SshServerFixture fixture) : IDisposable
         // Arrange
         await fixture.Server.Run("printf 'hello\\nworld' > /tmp/read-test");
         var server = fixture.Server.Server();
-        var connector = new SshConnector(TestSettings.Store(_dir, server));
+        var connector = new SshConnector(TestSettings.Store(_dir, server), SsmOptions.Default);
         await using var session = await connector.Connect(server, CancellationToken.None);
         using var copy = new MemoryStream();
 

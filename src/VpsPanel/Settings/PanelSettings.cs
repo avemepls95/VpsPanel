@@ -13,6 +13,7 @@ internal sealed class ServerSettings
     public int Port { get; set; } = 22;
     public string User { get; set; } = "root";
     public string KeyPath { get; set; } = "";
+    public SsmSettings? Ssm { get; set; }
     public string? HostKeyFingerprint { get; set; }
     public ProviderInfo? Provider { get; set; }
     public Dictionary<string, ComposeProjectSettings> ComposeProjects { get; set; } = new();
@@ -20,6 +21,11 @@ internal sealed class ServerSettings
 }
 
 internal sealed record ProviderInfo(string Name, bool IsManual);
+
+/// <summary>
+/// Connection through AWS SSM port forwarding. With it Host is not used and Port is the SSH port on the instance.
+/// </summary>
+internal sealed record SsmSettings(string InstanceId, string? Profile, string? Region);
 
 /// <summary>
 /// A compose project with its own commands. The folder and files are needed to manage the project after docker compose down.

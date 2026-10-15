@@ -5,6 +5,12 @@ export interface ProviderInfo {
   isManual: boolean;
 }
 
+export interface SsmView {
+  instanceId: string;
+  profile: string | null;
+  region: string | null;
+}
+
 export interface ServerView {
   id: string;
   name: string;
@@ -14,6 +20,7 @@ export interface ServerView {
   keyPath: string;
   provider: ProviderInfo | null;
   hostKeyFingerprint: string | null;
+  ssm: SsmView | null;
 }
 
 export interface ServerRequest {
@@ -23,6 +30,7 @@ export interface ServerRequest {
   user: string;
   keyPath: string;
   providerName: string | null;
+  ssm: SsmView | null;
 }
 
 export interface SystemSnapshot {

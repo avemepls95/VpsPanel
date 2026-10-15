@@ -197,6 +197,183 @@ public sealed class ServerEndpointsTests : IDisposable
         _app.Settings.Read().Servers.Single().HostKeyFingerprint.Should().BeNull();
     }
 
+    [Fact(DisplayName = "New server behind SSM => saved without an address, hosting AWS, no ipinfo request")]
+    public async Task Create_Should_SaveSsmServerWithAwsProvider_When_SsmGiven()
+    {
+        // Arrange
+        var client = _app.CreatePanelClient();
+
+        // Act
+        var response = await client.PostAsJsonAsync("/api/servers",
+            new ServerRequest("Aws", null, 22, "root", @"C:\keys\k", null, new SsmRequest(" i-0123456789abcdef0 ", " ", " eu-central-1 ")));
+
+        // Assert
+        (await response.Content.ReadFromJsonAsync<ServerView>())!.Ssm
+            .Should().Be(new SsmSettings("i-0123456789abcdef0", null, "eu-central-1"));
+        _app.Settings.Read().Servers.Should().BeEquivalentTo(new[]
+        {
+            new
+            {
+                Name = "Aws",
+                Host = "",
+                Port = 22,
+                Ssm = new SsmSettings("i-0123456789abcdef0", null, "eu-central-1"),
+                Provider = new ProviderInfo("AWS", false)
+            }
+        });
+        await _providers.DidNotReceiveWithAnyArgs().Find(default!, default);
+    }
+
+    [Fact(DisplayName = "Server behind SSM without an instance ID => 400 with the error text")]
+    public async Task Create_Should_Return400_When_InstanceIdEmpty()
+    {
+        // Arrange
+        var client = _app.CreatePanelClient();
+
+        // Act
+        var response = await client.PostAsJsonAsync("/api/servers",
+            new ServerRequest("Aws", null, 22, "root", @"C:\keys\k", null, new SsmRequest(" ", null, null)));
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadFromJsonAsync<ProblemDetails>())!.Detail.Should().Be("Enter the instance ID.");
+    }
+
+    [Theory(DisplayName = "Instance ID in a wrong format => 400 with the expected format")]
+    [InlineData("-095bc0d6cdadd5b87")]
+    [InlineData("i-0123")]
+    [InlineData("i-0123456789abcdef0 extra")]
+    [InlineData("mi-01234567")]
+    public async Task Create_Should_Return400_When_InstanceIdHasWrongFormat(string instanceId)
+    {
+        // Arrange
+        var client = _app.CreatePanelClient();
+
+        // Act
+        var response = await client.PostAsJsonAsync("/api/servers",
+            new ServerRequest("Aws", null, 22, "root", @"C:\keys\k", null, new SsmRequest(instanceId, null, null)));
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadFromJsonAsync<ProblemDetails>())!.Detail
+            .Should().Be("The instance ID must look like i-0123456789abcdef0.");
+    }
+
+    [Theory(DisplayName = "Instance ID of an EC2 instance or a managed node => saved")]
+    [InlineData("i-01234567")]
+    [InlineData("i-0123456789abcdef0")]
+    [InlineData("mi-0123456789abcdef0")]
+    public async Task Create_Should_SaveServer_When_InstanceIdHasValidFormat(string instanceId)
+    {
+        // Arrange
+        var client = _app.CreatePanelClient();
+
+        // Act
+        var response = await client.PostAsJsonAsync("/api/servers",
+            new ServerRequest("Aws", null, 22, "root", @"C:\keys\k", null, new SsmRequest(instanceId, null, null)));
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        _app.Settings.Read().Servers.Single().Ssm.Should().Be(new SsmSettings(instanceId, null, null));
+    }
+
+    [Fact(DisplayName = "Server switched from SSH to SSM => address cleared, fingerprint reset, hosting AWS without ipinfo")]
+    public async Task Update_Should_ResetFingerprintAndSetAws_When_SwitchedToSsm()
+    {
+        // Arrange
+        var client = _app.CreatePanelClient();
+        var server = Seed(s =>
+        {
+            s.HostKeyFingerprint = "SHA256:old";
+            s.Provider = new ProviderInfo("Example Hosting", false);
+        });
+
+        // Act
+        await client.PutAsJsonAsync($"/api/servers/{server.Id}",
+            new ServerRequest("Main", "", 22, "root", server.KeyPath, "Example Hosting", new SsmRequest("i-0123456789abcdef0", null, null)));
+
+        // Assert
+        _app.Settings.Read().Servers.Should().BeEquivalentTo(new[]
+        {
+            new
+            {
+                Host = "",
+                Ssm = new SsmSettings("i-0123456789abcdef0", null, null),
+                HostKeyFingerprint = (string?)null,
+                Provider = new ProviderInfo("AWS", false)
+            }
+        });
+        await _providers.DidNotReceiveWithAnyArgs().Find(default!, default);
+    }
+
+    [Fact(DisplayName = "Instance ID changed => fingerprint reset")]
+    public async Task Update_Should_ResetFingerprint_When_InstanceIdChanged()
+    {
+        // Arrange
+        var client = _app.CreatePanelClient();
+        var server = Seed(s =>
+        {
+            s.Host = "";
+            s.Ssm = new SsmSettings("i-0123456789abcdef0", null, null);
+            s.HostKeyFingerprint = "SHA256:old";
+            s.Provider = new ProviderInfo("AWS", false);
+        });
+
+        // Act
+        await client.PutAsJsonAsync($"/api/servers/{server.Id}",
+            new ServerRequest("Main", "", 22, "root", server.KeyPath, "AWS", new SsmRequest("i-0fedcba9876543210", null, null)));
+
+        // Assert
+        _app.Settings.Read().Servers.Should().BeEquivalentTo(new[]
+        {
+            new { Ssm = new SsmSettings("i-0fedcba9876543210", null, null), HostKeyFingerprint = (string?)null }
+        });
+    }
+
+    [Fact(DisplayName = "Only the AWS profile changed => fingerprint unchanged")]
+    public async Task Update_Should_KeepFingerprint_When_ProfileChanged()
+    {
+        // Arrange
+        var client = _app.CreatePanelClient();
+        var server = Seed(s =>
+        {
+            s.Host = "";
+            s.Ssm = new SsmSettings("i-0123456789abcdef0", null, null);
+            s.HostKeyFingerprint = "SHA256:same";
+            s.Provider = new ProviderInfo("AWS", false);
+        });
+
+        // Act
+        await client.PutAsJsonAsync($"/api/servers/{server.Id}",
+            new ServerRequest("Main", "", 22, "root", server.KeyPath, "AWS", new SsmRequest("i-0123456789abcdef0", "work", null)));
+
+        // Assert
+        _app.Settings.Read().Servers.Should().BeEquivalentTo(new[]
+        {
+            new { Ssm = new SsmSettings("i-0123456789abcdef0", "work", null), HostKeyFingerprint = "SHA256:same" }
+        });
+    }
+
+    [Fact(DisplayName = "Detect hosting again behind SSM => hosting AWS, no ipinfo request")]
+    public async Task RefreshProvider_Should_SetAws_When_ServerUsesSsm()
+    {
+        // Arrange
+        var client = _app.CreatePanelClient();
+        var server = Seed(s =>
+        {
+            s.Host = "";
+            s.Ssm = new SsmSettings("i-0123456789abcdef0", null, null);
+            s.Provider = new ProviderInfo("My Hosting", true);
+        });
+
+        // Act
+        await client.PostAsync($"/api/servers/{server.Id}/provider/refresh", null);
+
+        // Assert
+        _app.Settings.Read().Servers.Single().Provider.Should().Be(new ProviderInfo("AWS", false));
+        await _providers.DidNotReceiveWithAnyArgs().Find(default!, default);
+    }
+
     [Fact(DisplayName = "Server deleted => the server is not in the settings")]
     public async Task Delete_Should_RemoveServer_When_Called()
     {

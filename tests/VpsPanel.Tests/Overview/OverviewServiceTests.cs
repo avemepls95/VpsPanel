@@ -19,7 +19,7 @@ public sealed class OverviewServiceTests(SshServerFixture fixture) : IDisposable
         // Arrange
         var server = fixture.Server.Server();
         var store = TestSettings.Store(_dir, server);
-        var service = new OverviewService(store, new SshConnector(store));
+        var service = new OverviewService(store, new SshConnector(store, SsmOptions.Default));
 
         // Act
         var overview = await service.Get(server.Id, CancellationToken.None);
@@ -42,7 +42,7 @@ public sealed class OverviewServiceTests(SshServerFixture fixture) : IDisposable
         await using var bare = await SshServerContainer.Start(dockerStub: false);
         var server = bare.Server();
         var store = TestSettings.Store(_dir, server);
-        var service = new OverviewService(store, new SshConnector(store));
+        var service = new OverviewService(store, new SshConnector(store, SsmOptions.Default));
 
         // Act
         var overview = await service.Get(server.Id, CancellationToken.None);
@@ -69,7 +69,7 @@ public sealed class OverviewServiceTests(SshServerFixture fixture) : IDisposable
         server.Host = "127.0.0.1";
         server.Port = TestNetwork.FreeTcpPort();
         var store = TestSettings.Store(_dir, server);
-        var service = new OverviewService(store, new SshConnector(store));
+        var service = new OverviewService(store, new SshConnector(store, SsmOptions.Default));
 
         // Act
         var overview = await service.Get(server.Id, CancellationToken.None);
@@ -109,7 +109,7 @@ public sealed class OverviewServiceTests(SshServerFixture fixture) : IDisposable
         var server = fixture.Server.Server("Main");
         server.HostKeyFingerprint = "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
         var store = TestSettings.Store(_dir, server);
-        var service = new OverviewService(store, new SshConnector(store));
+        var service = new OverviewService(store, new SshConnector(store, SsmOptions.Default));
 
         // Act
         var overview = await service.Get(server.Id, CancellationToken.None);
@@ -132,7 +132,7 @@ public sealed class OverviewServiceTests(SshServerFixture fixture) : IDisposable
             Commands = [new ProjectCommand { Id = "c1", Name = "Rebuild", Script = "make" }]
         };
         var store = TestSettings.Store(_dir, server);
-        var service = new OverviewService(store, new SshConnector(store));
+        var service = new OverviewService(store, new SshConnector(store, SsmOptions.Default));
 
         // Act
         await service.Get(server.Id, CancellationToken.None);
@@ -152,7 +152,7 @@ public sealed class OverviewServiceTests(SshServerFixture fixture) : IDisposable
         // Arrange
         var server = fixture.Server.Server();
         var store = TestSettings.Store(_dir, server);
-        var connector = new SshConnector(store);
+        var connector = new SshConnector(store, SsmOptions.Default);
         var service = new OverviewService(store, connector);
         await using var session = await connector.Connect(server, CancellationToken.None);
 
@@ -169,7 +169,7 @@ public sealed class OverviewServiceTests(SshServerFixture fixture) : IDisposable
         // Arrange
         var server = fixture.Server.Server();
         var store = TestSettings.Store(_dir, server);
-        var connector = new SshConnector(store);
+        var connector = new SshConnector(store, SsmOptions.Default);
         var service = new OverviewService(store, connector);
         await using var session = await connector.Connect(server, CancellationToken.None);
 

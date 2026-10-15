@@ -6,6 +6,8 @@ namespace VpsPanel.Api;
 
 internal static class ServerEndpoints
 {
+    private static readonly ProviderInfo AwsProvider = new("AWS", false);
+
     public static void MapServerEndpoints(this IEndpointRouteBuilder app)
     {
         var servers = app.MapGroup("/api/servers");
@@ -25,7 +27,7 @@ internal static class ServerEndpoints
         if (valid.ProviderName is not null)
             provider = new ProviderInfo(valid.ProviderName, true);
         else
-            provider = await providers.Find(valid.Host, ct) is { } found ? new ProviderInfo(found, false) : null;
+            provider = await DetectProvider(valid.Host, valid.Ssm, providers, ct);
 
         var server = new ServerSettings
         {
@@ -35,6 +37,7 @@ internal static class ServerEndpoints
             Port = valid.Port,
             User = valid.User,
             KeyPath = valid.KeyPath,
+            Ssm = valid.Ssm,
             Provider = provider
         };
         settings.Update(s => s.Servers.Add(server));
@@ -45,7 +48,7 @@ internal static class ServerEndpoints
     {
         var valid = request.Validate();
         var current = settings.Read().GetServer(id);
-        var addressChanged = current.Host != valid.Host || current.Port != valid.Port;
+        var addressChanged = current.Host != valid.Host || current.Port != valid.Port || current.Ssm?.InstanceId != valid.Ssm?.InstanceId;
         var provider = await ResolveProvider(current, valid, addressChanged, providers, ct);
 
         return settings.Update(s =>
@@ -56,6 +59,7 @@ internal static class ServerEndpoints
             server.Port = valid.Port;
             server.User = valid.User;
             server.KeyPath = valid.KeyPath;
+            server.Ssm = valid.Ssm;
             server.Provider = provider;
             if (addressChanged)
                 server.HostKeyFingerprint = null;
@@ -69,8 +73,16 @@ internal static class ServerEndpoints
         if (valid.ProviderName != current.Provider?.Name)
             return valid.ProviderName is null ? null : new ProviderInfo(valid.ProviderName, true);
         if (addressChanged && current.Provider?.IsManual != true)
-            return await providers.Find(valid.Host, ct) is { } found ? new ProviderInfo(found, false) : null;
+            return await DetectProvider(valid.Host, valid.Ssm, providers, ct);
         return current.Provider;
+    }
+
+    // A server behind SSM is reached through 127.0.0.1, so ipinfo would not tell anything about it.
+    private static async Task<ProviderInfo?> DetectProvider(string host, SsmSettings? ssm, IProviderLookup providers, CancellationToken ct)
+    {
+        if (ssm is not null)
+            return AwsProvider;
+        return await providers.Find(host, ct) is { } found ? new ProviderInfo(found, false) : null;
     }
 
     private static IResult Delete(string id, ISettingsStore settings)
@@ -81,11 +93,12 @@ internal static class ServerEndpoints
 
     private static async Task<ServerView> RefreshProvider(string id, ISettingsStore settings, IProviderLookup providers, CancellationToken ct)
     {
-        var found = await providers.Find(settings.Read().GetServer(id).Host, ct);
+        var current = settings.Read().GetServer(id);
+        var provider = await DetectProvider(current.Host, current.Ssm, providers, ct);
         return settings.Update(s =>
         {
             var server = s.GetServer(id);
-            server.Provider = found is null ? null : new ProviderInfo(found, false);
+            server.Provider = provider;
             return ServerView.From(server);
         });
     }
