@@ -3,7 +3,7 @@ import { ActionIcon, Badge, Box, Button, Card, Code, Collapse, Group, Loader, St
 import { IconChevronDown, IconRefresh } from '@tabler/icons-react';
 import { useNavigate } from 'react-router';
 import { api } from '../api/endpoints';
-import type { CommandView, ManualProjectView, ServerOverview, ServerView } from '../api/types';
+import type { CommandView, DockerAction, ManualProjectView, RunStarted, ServerOverview, ServerView } from '../api/types';
 import { ConfirmModal } from '../common/ConfirmModal';
 import { notifyError } from '../common/notify';
 import { formatUptime, plural } from '../format';
@@ -82,6 +82,23 @@ export function ServerCard({ server, state, onRefresh, onEdit }: Props) {
     confirmLabel: 'Run',
     action: () => runs.track(api.runCommand(server.id, command.id)),
   });
+
+  // Start does not interrupt anything, so it runs without a question.
+  const dockerAction = (action: DockerAction, target: string, command: string, start: () => Promise<RunStarted>) => {
+    if (action === 'start') {
+      void runs.track(start());
+      return;
+    }
+    const label = action === 'stop' ? 'Stop' : 'Restart';
+    setDialog({
+      kind: 'confirm',
+      title: `${label} ${target}?`,
+      body: <Text c="#4A505C">{command} will run on the server.</Text>,
+      confirmLabel: label,
+      danger: action === 'stop',
+      action: () => runs.track(start()),
+    });
+  };
 
   const deleteCommand = (command: CommandView, remove: () => Promise<void>) => setDialog({
     kind: 'confirm',
@@ -173,6 +190,8 @@ export function ServerCard({ server, state, onRefresh, onEdit }: Props) {
                 confirmLabel: 'Update images',
                 action: () => runs.track(api.updateCompose(server.id, project.name)),
               })}
+              onDockerAction={(action) => dockerAction(action, `project ${project.name}`, `docker compose ${action}`,
+                () => api.composeAction(server.id, project.name, action))}
             />
           );
         })}
@@ -206,7 +225,14 @@ export function ServerCard({ server, state, onRefresh, onEdit }: Props) {
             />
           );
         })}
-        {overview.standaloneContainers.length > 0 && <StandaloneCard containers={overview.standaloneContainers} />}
+        {overview.standaloneContainers.length > 0 && (
+          <StandaloneCard
+            containers={overview.standaloneContainers}
+            isBusy={(container) => runs.isBusy(server.id, `container:${container.name}`)}
+            onDockerAction={(container, action) => dockerAction(action, `container ${container.name}`, `docker ${action} ${container.name}`,
+              () => api.containerAction(server.id, container.name, action))}
+          />
+        )}
         {overview.timers.length > 0 && <TimersCard timers={overview.timers} />}
       </Box>
     </>

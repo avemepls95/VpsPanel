@@ -1,6 +1,6 @@
 import { request } from './client';
 import type {
-  CommandRequest, CommandView, CopyRequest, DirectoryListing, FileContentView, ManualProjectRequest,
+  CommandRequest, CommandView, CopyRequest, DirectoryListing, DockerAction, FileContentView, ManualProjectRequest,
   ManualProjectView, RunStarted, RunView, SaveFileRequest, SaveFileResult, ServerOverview, ServerRequest,
   ServerView, UploadResult,
 } from './types';
@@ -22,6 +22,10 @@ export const api = {
 
   updateCompose: (id: string, project: string) =>
     request<RunStarted>('POST', `${server(id)}/compose/${q(project)}/update`),
+  composeAction: (id: string, project: string, action: DockerAction) =>
+    request<RunStarted>('POST', `${server(id)}/compose/${q(project)}/${action}`),
+  containerAction: (id: string, name: string, action: DockerAction) =>
+    request<RunStarted>('POST', `${server(id)}/containers/${q(name)}/${action}`),
   addComposeCommand: (id: string, project: string, body: CommandRequest) =>
     request<CommandView>('POST', `${server(id)}/compose/${q(project)}/commands`, body),
   updateComposeCommand: (id: string, project: string, commandId: string, body: CommandRequest) =>

@@ -1,3 +1,4 @@
+using VpsPanel.Containers;
 using VpsPanel.Overview;
 using VpsPanel.Projects;
 
@@ -44,5 +45,34 @@ public sealed class CommandBuilderTests
 
         // Assert
         command.Should().Be("docker compose -p 'demo' -f '/srv/demo/compose.yml' pull && docker compose -p 'demo' -f '/srv/demo/compose.yml' up -d");
+    }
+
+    [Theory(DisplayName = "Action on a compose project => docker compose with the project parameters and the action")]
+    [InlineData("Restart", "restart")]
+    [InlineData("Stop", "stop")]
+    [InlineData("Start", "start")]
+    public void ComposeAction_Should_PassProjectParameters_When_Called(string action, string expected)
+    {
+        // Arrange
+        var project = new ComposeProjectView("demo", "/srv/demo", ["/srv/demo/compose.yml"], "/srv/demo/.env", 1, 1, false, [], []);
+
+        // Act
+        var command = CommandBuilder.ComposeAction(project, Enum.Parse<DockerAction>(action));
+
+        // Assert
+        command.Should().Be($"docker compose -p 'demo' -f '/srv/demo/compose.yml' --env-file '/srv/demo/.env' {expected}");
+    }
+
+    [Fact(DisplayName = "Action on a container with a quote in the name => docker with the quoted name and stderr in the output")]
+    public void ContainerAction_Should_QuoteName_When_Called()
+    {
+        // Arrange
+        var name = "it's";
+
+        // Act
+        var command = CommandBuilder.ContainerAction(name, DockerAction.Restart);
+
+        // Assert
+        command.Should().Be("docker restart 'it'\\''s' 2>&1");
     }
 }

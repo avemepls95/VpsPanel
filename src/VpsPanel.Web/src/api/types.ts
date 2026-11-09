@@ -44,6 +44,8 @@ export interface SystemSnapshot {
   diskUsed: number;
 }
 
+export type DockerAction = 'restart' | 'stop' | 'start';
+
 export interface ContainerView {
   name: string;
   image: string;

@@ -1,3 +1,4 @@
+using VpsPanel.Containers;
 using VpsPanel.Overview;
 using VpsPanel.Runs;
 using VpsPanel.Settings;
@@ -126,18 +127,23 @@ internal sealed class ProjectService(ISettingsStore settings, ISshConnector conn
         throw new PanelException(404, "Command not found.");
     }
 
-    public Run UpdateCompose(string serverId, string project)
+    public Run UpdateCompose(string serverId, string project) =>
+        StartComposeRun(serverId, project, $"Update images · {project}", CommandBuilder.ComposeUpdate);
+
+    public Run RunComposeAction(string serverId, string project, DockerAction action) =>
+        StartComposeRun(serverId, project, $"{action} · {project}", view => CommandBuilder.ComposeAction(view, action));
+
+    private Run StartComposeRun(string serverId, string project, string title, Func<ComposeProjectView, string> command)
     {
         var server = settings.Read().GetServer(serverId);
         var projectKey = $"compose:{project}";
         return runs.Start(
-            new RunStart(serverId, projectKey, $"Update images · {project}", server.Name, LockKey(serverId, projectKey), BusyMessage),
+            new RunStart(serverId, projectKey, title, server.Name, LockKey(serverId, projectKey), BusyMessage),
             async run =>
             {
                 await using var session = await connector.Connect(server, run.Token);
                 var view = await overview.GetComposeProject(session, server, project, run.Token);
-                return await session.ExecStreaming(
-                    CommandBuilder.InFolder(view.WorkingDir, CommandBuilder.ComposeUpdate(view)), Append(run), run.Token);
+                return await session.ExecStreaming(CommandBuilder.InFolder(view.WorkingDir, command(view)), Append(run), run.Token);
             });
     }
 

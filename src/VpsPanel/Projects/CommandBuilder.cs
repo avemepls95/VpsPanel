@@ -1,4 +1,5 @@
 using System.Text;
+using VpsPanel.Containers;
 using VpsPanel.Overview;
 using static VpsPanel.Ssh.ShellQuote;
 
@@ -14,11 +15,22 @@ internal static class CommandBuilder
 
     public static string ComposeUpdate(ComposeProjectView project)
     {
+        var args = ComposeArgs(project);
+        return $"docker compose {args} pull && docker compose {args} up -d";
+    }
+
+    public static string ComposeAction(ComposeProjectView project, DockerAction action) =>
+        $"docker compose {ComposeArgs(project)} {action.Command()}";
+
+    public static string ContainerAction(string name, DockerAction action) => $"docker {action.Command()} {Q(name)} 2>&1";
+
+    private static string ComposeArgs(ComposeProjectView project)
+    {
         var args = new StringBuilder($"-p {Q(project.Name)}");
         foreach (var file in project.ConfigFiles)
             args.Append($" -f {Q(file)}");
         if (!string.IsNullOrEmpty(project.EnvironmentFile))
             args.Append($" --env-file {Q(project.EnvironmentFile)}");
-        return $"docker compose {args} pull && docker compose {args} up -d";
+        return args.ToString();
     }
 }

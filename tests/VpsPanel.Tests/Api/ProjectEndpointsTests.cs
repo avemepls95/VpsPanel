@@ -30,6 +30,45 @@ public sealed class ProjectEndpointsTests : IDisposable
         _app.Settings.Read().Servers.Single().ManualProjects.Should().ContainSingle(p => p.Name == "sync-job");
     }
 
+    [Theory(DisplayName = "Restart, stop or start of a compose project or a container => a run is started")]
+    [InlineData("compose/demo/restart")]
+    [InlineData("compose/demo/stop")]
+    [InlineData("compose/demo/start")]
+    [InlineData("containers/vpn/restart")]
+    [InlineData("containers/vpn/stop")]
+    [InlineData("containers/vpn/start")]
+    public async Task DockerAction_Should_StartRun_When_ActionKnown(string path)
+    {
+        // Arrange
+        var client = _app.CreatePanelClient();
+        var server = TestServers.Create("Main");
+        _app.Settings.Update(s => s.Servers.Add(server));
+
+        // Act
+        var response = await client.PostAsync($"/api/servers/{server.Id}/{path}", null);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("runId").GetString().Should().NotBeEmpty();
+    }
+
+    [Theory(DisplayName = "Unknown docker action => 404")]
+    [InlineData("compose/demo/kill")]
+    [InlineData("containers/vpn/kill")]
+    public async Task DockerAction_Should_Return404_When_ActionUnknown(string path)
+    {
+        // Arrange
+        var client = _app.CreatePanelClient();
+        var server = TestServers.Create("Main");
+        _app.Settings.Update(s => s.Servers.Add(server));
+
+        // Act
+        var response = await client.PostAsync($"/api/servers/{server.Id}/{path}", null);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
     [Fact(DisplayName = "Unknown command is run => 404")]
     public async Task RunCommand_Should_Return404_When_CommandUnknown()
     {

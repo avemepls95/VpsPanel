@@ -1,3 +1,4 @@
+using VpsPanel.Containers;
 using VpsPanel.Projects;
 using VpsPanel.Runs;
 
@@ -23,6 +24,12 @@ internal static class ProjectEndpoints
             });
         server.MapPost("/compose/{project}/update",
             (string id, string project, ProjectService projects) => new RunStarted(projects.UpdateCompose(id, project).Id));
+        server.MapPost($"/compose/{{project}}/{{action:{DockerActions.RouteConstraint}}}",
+            (string id, string project, string action, ProjectService projects) =>
+                new RunStarted(projects.RunComposeAction(id, project, DockerActions.Parse(action)).Id));
+        server.MapPost($"/containers/{{name}}/{{action:{DockerActions.RouteConstraint}}}",
+            (string id, string name, string action, ContainerService containers) =>
+                new RunStarted(containers.Run(id, name, DockerActions.Parse(action)).Id));
 
         server.MapPost("/manual-projects",
             (string id, ManualProjectRequest request, ProjectService projects) => projects.AddManualProject(id, request));

@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
-import { Badge, Box, Button, Card, Group, Menu, Stack, Table, Text, Title, Tooltip } from '@mantine/core';
+import { ActionIcon, Badge, Box, Button, Card, Group, Menu, Stack, Table, Text, Title, Tooltip } from '@mantine/core';
 import {
-  IconBox, IconChevronDown, IconClock, IconDownload, IconPencil, IconPlayerPlayFilled, IconStack2, IconTerminal2, IconTrash,
+  IconBox, IconChevronDown, IconClock, IconDownload, IconPencil, IconPlayerPlay, IconPlayerPlayFilled, IconPlayerStopFilled,
+  IconRotateClockwise, IconStack2, IconTerminal2, IconTrash,
 } from '@tabler/icons-react';
-import type { CommandView, ComposeProjectView, ContainerView, ManualProjectView, TimerView } from '../api/types';
+import type { CommandView, ComposeProjectView, ContainerView, DockerAction, ManualProjectView, TimerView } from '../api/types';
 import { formatWhen } from '../format';
 import { unitColors } from '../theme';
 import { ContainerDot } from './ServerSummary';
@@ -109,6 +110,17 @@ function CommandFooter({ commands, actions, leading, trailing }: { commands: Com
   );
 }
 
+const dockerActions: { action: DockerAction; label: string; icon: ReactNode }[] = [
+  { action: 'restart', label: 'Restart', icon: <IconRotateClockwise size={14} /> },
+  { action: 'stop', label: 'Stop', icon: <IconPlayerStopFilled size={14} /> },
+  { action: 'start', label: 'Start', icon: <IconPlayerPlay size={14} /> },
+];
+
+// Stop needs a running container, start needs a stopped one.
+function actionDisabled(action: DockerAction, running: number, total: number) {
+  return (action === 'stop' && running === 0) || (action === 'start' && running === total);
+}
+
 function ContainersTable({ containers }: { containers: ContainerView[] }) {
   return (
     <Box px={16} pb={14} style={{ overflowX: 'auto' }}>
@@ -141,7 +153,12 @@ function ContainersTable({ containers }: { containers: ContainerView[] }) {
   );
 }
 
-export function ComposeCard({ project, actions, onUpdate }: { project: ComposeProjectView; actions: CommandActions; onUpdate: () => void }) {
+export function ComposeCard({ project, actions, onUpdate, onDockerAction }: {
+  project: ComposeProjectView;
+  actions: CommandActions;
+  onUpdate: () => void;
+  onDockerAction: (action: DockerAction) => void;
+}) {
   const fully = project.running === project.total;
   const pill = project.stopped
     ? <Badge color="yellow" variant="light" tt="none">not running</Badge>
@@ -159,11 +176,26 @@ export function ComposeCard({ project, actions, onUpdate }: { project: ComposePr
           commands={project.commands}
           actions={actions}
           leading={
-            <Tooltip label="docker compose pull && docker compose up -d" withArrow>
-              <Button size="xs" h={36} disabled={actions.busy} leftSection={<IconDownload size={14} />} onClick={onUpdate}>
-                Update images
-              </Button>
-            </Tooltip>
+            <>
+              <Tooltip label="docker compose pull && docker compose up -d" withArrow>
+                <Button size="xs" h={36} disabled={actions.busy} leftSection={<IconDownload size={14} />} onClick={onUpdate}>
+                  Update images
+                </Button>
+              </Tooltip>
+              {!project.stopped && dockerActions.map(({ action, label, icon }) => (
+                <Button
+                  key={action}
+                  size="xs"
+                  h={36}
+                  variant="default"
+                  disabled={actions.busy || actionDisabled(action, project.running, project.total)}
+                  leftSection={icon}
+                  onClick={() => onDockerAction(action)}
+                >
+                  {label}
+                </Button>
+              ))}
+            </>
           }
         />
       }
@@ -203,7 +235,11 @@ export function ManualCard({ project, actions, onEditProject, onDeleteProject }:
   );
 }
 
-export function StandaloneCard({ containers }: { containers: ContainerView[] }) {
+export function StandaloneCard({ containers, isBusy, onDockerAction }: {
+  containers: ContainerView[];
+  isBusy: (container: ContainerView) => boolean;
+  onDockerAction: (container: ContainerView, action: DockerAction) => void;
+}) {
   const running = containers.filter((c) => c.state === 'running').length;
   return (
     <UnitShell
@@ -222,7 +258,24 @@ export function StandaloneCard({ containers }: { containers: ContainerView[] }) 
               </Group>
               <Text ff="monospace" fz={12} c="dimmed" pl={15}>{container.image}</Text>
             </Stack>
-            <Text ff="monospace" fz={12} c="#4A505C">{container.ports}</Text>
+            <Group gap={10} wrap="nowrap">
+              <Text ff="monospace" fz={12} c="#4A505C">{container.ports}</Text>
+              <Group gap={4} wrap="nowrap">
+                {dockerActions.map(({ action, label, icon }) => (
+                  <Tooltip key={action} label={label} withArrow>
+                    <ActionIcon
+                      variant="default"
+                      size={30}
+                      aria-label={`${label} ${container.name}`}
+                      disabled={isBusy(container) || actionDisabled(action, container.state === 'running' ? 1 : 0, 1)}
+                      onClick={() => onDockerAction(container, action)}
+                    >
+                      {icon}
+                    </ActionIcon>
+                  </Tooltip>
+                ))}
+              </Group>
+            </Group>
           </Group>
         ))}
       </Stack>

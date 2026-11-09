@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using VpsPanel.Api;
+using VpsPanel.Containers;
 using VpsPanel.Files;
 using VpsPanel.Hosting;
 using VpsPanel.Overview;
@@ -38,6 +39,7 @@ builder.Services.AddSingleton<OverviewService>();
 builder.Services.AddHttpClient<IProviderLookup, IpInfoProviderLookup>(c => c.Timeout = TimeSpan.FromSeconds(10));
 builder.Services.AddSingleton<RunManager>();
 builder.Services.AddSingleton<ProjectService>();
+builder.Services.AddSingleton<ContainerService>();
 builder.Services.AddSingleton(RebootTiming.Default);
 builder.Services.AddSingleton<RebootService>();
 builder.Services.AddSingleton<BackupStore>();

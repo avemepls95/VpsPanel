@@ -1,3 +1,4 @@
+using VpsPanel.Containers;
 using VpsPanel.Overview;
 using VpsPanel.Projects;
 using VpsPanel.Runs;
@@ -87,6 +88,23 @@ public sealed class ProjectRunsTests(SshServerFixture fixture) : IDisposable
         Lines(run).Should().Equal(
             "docker compose -p demo -f /srv/demo/compose.yml pull",
             "docker compose -p demo -f /srv/demo/compose.yml up -d");
+    }
+
+    [Fact(DisplayName = "Compose project restart => docker compose restart with parameters from labels")]
+    public async Task RunComposeAction_Should_RunComposeCommand_When_ProjectRuns()
+    {
+        // Arrange
+        var server = fixture.Server.Server();
+        var service = CreateService(TestSettings.Store(_dir, server));
+
+        // Act
+        var run = service.RunComposeAction(server.Id, "demo", DockerAction.Restart);
+
+        // Assert
+        await run.Completed;
+        run.Status.Should().Be(RunStatus.Succeeded);
+        run.Title.Should().Be("Restart · demo");
+        Lines(run).Should().Equal("docker compose -p demo -f /srv/demo/compose.yml restart");
     }
 
     [Fact(DisplayName = "Long command is stopped => run finishes with status stopped")]

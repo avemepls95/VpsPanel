@@ -9,7 +9,7 @@ The panel runs on your own computer, opens in the browser and talks to your serv
 ## What it does
 
 - Shows all your servers on one page: memory, disk, docker compose projects with their containers, standalone containers and systemd timers. The color of the indicator tells you right away whether something needs attention.
-- Updates a compose project (`docker compose pull` and `up -d`) and runs your own commands. Every project can keep its own scripts, like `git pull && make deploy`.
+- Updates a compose project (`docker compose pull` and `up -d`) and runs your own commands. Every project can keep its own scripts, like `git pull && make deploy`. Restarts, stops and starts all containers of a compose project or a single container.
 - Reboots a server and waits until it comes back.
 - Streams the output of any command to the browser as it runs. If the connection drops, the output continues from where it stopped, and you can open a finished run later to read it again.
 - Lets you browse server files: open them, download a file or a whole folder as an archive, upload, delete, and copy to another server.
