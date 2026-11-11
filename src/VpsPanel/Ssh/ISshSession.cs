@@ -1,3 +1,5 @@
+using Renci.SshNet;
+
 namespace VpsPanel.Ssh;
 
 internal interface ISshSession : IAsyncDisposable
@@ -20,4 +22,9 @@ internal interface ISshSession : IAsyncDisposable
     /// Opens a file for writing. Without createNew an existing file is truncated, and its permissions and owner stay the same.
     /// </summary>
     Task<Stream> OpenWrite(string path, bool createNew, CancellationToken ct);
+
+    /// <summary>
+    /// Opens an interactive login shell with a pseudo-terminal of the given size.
+    /// </summary>
+    ShellStream OpenShell(int columns, int rows);
 }

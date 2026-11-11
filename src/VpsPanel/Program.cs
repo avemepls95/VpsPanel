@@ -12,6 +12,7 @@ using VpsPanel.Security;
 using VpsPanel.Servers;
 using VpsPanel.Settings;
 using VpsPanel.Ssh;
+using VpsPanel.Terminal;
 
 // A relative VpsPanel:DataDir is resolved from the launch folder.
 var launchDir = Environment.CurrentDirectory;
@@ -45,6 +46,7 @@ builder.Services.AddSingleton<RebootService>();
 builder.Services.AddSingleton<BackupStore>();
 builder.Services.AddSingleton<FileService>();
 builder.Services.AddSingleton<CopyService>();
+builder.Services.AddSingleton<TerminalBridge>();
 builder.Services.AddHostedService<BrowserLauncher>();
 
 var app = builder.Build();
@@ -68,6 +70,7 @@ app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseMiddleware<CsrfHeaderMiddleware>();
 app.UseDefaultFiles();
 app.UseStaticFiles();
+app.UseWebSockets();
 
 app.MapGet("/api/ping", () => new { app = "VpsPanel" });
 app.MapGet("/api/settings/status", (ISettingsStore settings) => new { error = settings.GetParseError() });
@@ -76,6 +79,7 @@ app.MapRunEndpoints();
 app.MapProjectEndpoints();
 app.MapRebootEndpoints();
 app.MapFileEndpoints();
+app.MapTerminalEndpoints();
 app.MapFallbackToFile("index.html");
 
 app.Run();

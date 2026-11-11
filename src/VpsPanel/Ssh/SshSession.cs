@@ -43,6 +43,9 @@ internal sealed class SshSession(SshClient ssh, Func<CancellationToken, Task<Sft
     public async Task<Stream> OpenWrite(string path, bool createNew, CancellationToken ct) =>
         await (await Sftp(ct)).OpenAsync(path, createNew ? FileMode.CreateNew : FileMode.Create, FileAccess.Write, ct);
 
+    public ShellStream OpenShell(int columns, int rows) =>
+        ssh.CreateShellStream("xterm-256color", (uint)columns, (uint)rows, 0, 0, 64 * 1024);
+
     public async ValueTask DisposeAsync()
     {
         _sftp?.Dispose();

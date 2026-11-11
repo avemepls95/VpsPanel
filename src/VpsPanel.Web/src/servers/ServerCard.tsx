@@ -162,6 +162,7 @@ export function ServerCard({ server, state, onRefresh, onEdit }: Props) {
             </ActionIcon>
           </Tooltip>
           <Button variant="default" onClick={() => openFiles('/')}>Files</Button>
+          <Button variant="default" onClick={() => navigate(`/terminal?server=${encodeURIComponent(server.id)}`)}>Terminal</Button>
           <Button variant="default" onClick={() => setDialog({ kind: 'manual', project: null })}>Add project</Button>
           <Button variant="default" onClick={onEdit}>Settings</Button>
           <Button variant="outline" color="red" onClick={() => setDialog({ kind: 'reboot' })}>Reboot</Button>

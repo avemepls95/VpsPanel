@@ -62,5 +62,7 @@ export const api = {
   deleteFile: (id: string, path: string, confirmName: string | null) =>
     request<void>('DELETE', `${server(id)}/files?path=${q(path)}${confirmName === null ? '' : `&confirmName=${q(confirmName)}`}`),
   downloadUrl: (id: string, path: string) => `${server(id)}/files/download?path=${q(path)}`,
+  terminalUrl: (id: string, cols: number, rows: number) =>
+    `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${server(id)}/terminal?cols=${cols}&rows=${rows}`,
   copy: (body: CopyRequest) => request<RunStarted>('POST', '/api/files/copy', body),
 };

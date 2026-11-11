@@ -13,6 +13,7 @@ The panel runs on your own computer, opens in the browser and talks to your serv
 - Reboots a server and waits until it comes back.
 - Streams the output of any command to the browser as it runs. If the connection drops, the output continues from where it stopped, and you can open a finished run later to read it again.
 - Lets you browse server files: open them, download a file or a whole folder as an archive, upload, delete, and copy to another server.
+- Opens a terminal on the server right in the browser. It is a regular interactive shell, so `top`, `vim`, `htop` and Tab completion work as usual. Ctrl+C with selected text copies it, otherwise it interrupts the command. Ctrl+V pastes. Closing the page ends the shell, and the commands running in it are interrupted.
 - Has a built-in editor for configs and `.env` files (UTF-8 text up to 1 MB). It keeps line endings and the BOM as they were. Before every save the panel puts the previous version of the file into a backup on your computer. If someone changed the file on the server while you were editing it, the panel warns you.
 
 Command output in the runs panel:
@@ -108,7 +109,7 @@ An example `settings.json`:
 
 ## Security
 
-The panel has no login, so it listens on `127.0.0.1` only and other machines can't reach it. To keep a random website in another tab from talking to it, the panel rejects requests with an unexpected `Host` header and any request that changes something unless it carries the panel's own header.
+The panel has no login, so it listens on `127.0.0.1` only and other machines can't reach it. To keep a random website in another tab from talking to it, the panel rejects requests with an unexpected `Host` header and any request that changes something unless it carries the panel's own header. The terminal connection is accepted only from the panel's own page.
 
 On the first connection the panel remembers the server's key fingerprint. If the key changes later, the panel refuses to connect until you reset the fingerprint in the server settings yourself. The command to check the fingerprint on the server is shown right there.
 

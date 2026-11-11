@@ -5,6 +5,7 @@ import { FilesPage } from './files/FilesPage';
 import { RunsDrawer } from './runs/RunsDrawer';
 import { RunsProvider } from './runs/RunsContext';
 import { ServersPage } from './servers/ServersPage';
+import { TerminalPage } from './terminal/TerminalPage';
 import { ui } from './theme';
 
 export function App() {
@@ -15,6 +16,7 @@ export function App() {
           <Route path="/" element={<ServersPage />} />
           <Route path="/files" element={<FilesPage />} />
           <Route path="/editor" element={<EditorPage />} />
+          <Route path="/terminal" element={<TerminalPage />} />
         </Routes>
       </Box>
       <RunsDrawer />
