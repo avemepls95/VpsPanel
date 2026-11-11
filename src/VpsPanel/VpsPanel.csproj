@@ -22,12 +22,16 @@
     <Content Update="wwwroot\**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
-  <!-- Frontend files appear after the project items are evaluated, so they are added to Content inside a target. -->
+  <!-- The project items are evaluated before the frontend build, which replaces the files in wwwroot,
+       so the wwwroot part of Content is collected again inside a target. A wildcard in Remove inside a target
+       matches only files that are still on disk, so the old items are picked by their path. -->
   <Target Name="BuildWeb" BeforeTargets="AssignTargetPaths" Condition="'$(_IsPublishing)' == 'true'">
     <Exec WorkingDirectory="$(WebProjectDir)" Command="npm ci" />
     <Exec WorkingDirectory="$(WebProjectDir)" Command="npm run build" />
     <ItemGroup>
-      <Content Include="wwwroot\**" Exclude="@(Content)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+      <_OldWebContent Include="@(Content)" Condition="$([System.String]::Copy('%(Content.Identity)').StartsWith('wwwroot\'))" />
+      <Content Remove="@(_OldWebContent)" />
+      <Content Include="wwwroot\**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     </ItemGroup>
   </Target>
 
