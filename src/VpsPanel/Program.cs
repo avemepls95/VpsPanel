@@ -11,6 +11,7 @@ using VpsPanel.Runs;
 using VpsPanel.Security;
 using VpsPanel.Servers;
 using VpsPanel.Settings;
+using VpsPanel.ShellColors;
 using VpsPanel.Ssh;
 using VpsPanel.Terminal;
 
@@ -47,6 +48,7 @@ builder.Services.AddSingleton<BackupStore>();
 builder.Services.AddSingleton<FileService>();
 builder.Services.AddSingleton<CopyService>();
 builder.Services.AddSingleton<TerminalBridge>();
+builder.Services.AddSingleton<ShellColorsService>();
 builder.Services.AddHostedService<BrowserLauncher>();
 
 var app = builder.Build();

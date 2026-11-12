@@ -2,7 +2,7 @@ import { request } from './client';
 import type {
   CommandRequest, CommandView, CopyRequest, DirectoryListing, DockerAction, FileContentView, ManualProjectRequest,
   ManualProjectView, RunStarted, RunView, SaveFileRequest, SaveFileResult, ServerOverview, ServerRequest,
-  ServerView, UploadResult,
+  ServerView, ShellColorsView, UploadResult,
 } from './types';
 
 const q = encodeURIComponent;
@@ -64,5 +64,8 @@ export const api = {
   downloadUrl: (id: string, path: string) => `${server(id)}/files/download?path=${q(path)}`,
   terminalUrl: (id: string, cols: number, rows: number) =>
     `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${server(id)}/terminal?cols=${cols}&rows=${rows}`,
+  terminalColors: (id: string) => request<ShellColorsView>('GET', `${server(id)}/terminal/colors`),
+  enableTerminalColors: (id: string) => request<ShellColorsView>('POST', `${server(id)}/terminal/colors/enable`),
+  disableTerminalColors: (id: string) => request<ShellColorsView>('POST', `${server(id)}/terminal/colors/disable`),
   copy: (body: CopyRequest) => request<RunStarted>('POST', '/api/files/copy', body),
 };

@@ -186,3 +186,9 @@ export interface ManualProjectRequest {
   name: string;
   folder: string;
 }
+
+export type ShellColorsState = 'on' | 'off' | 'unavailable';
+
+export interface ShellColorsView {
+  state: ShellColorsState;
+}

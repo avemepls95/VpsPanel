@@ -1,12 +1,20 @@
 using VpsPanel.Security;
+using VpsPanel.ShellColors;
 using VpsPanel.Terminal;
 
 namespace VpsPanel.Api;
 
 internal static class TerminalEndpoints
 {
-    public static void MapTerminalEndpoints(this IEndpointRouteBuilder app) =>
+    public static void MapTerminalEndpoints(this IEndpointRouteBuilder app)
+    {
         app.MapGet("/api/servers/{id}/terminal", Open);
+
+        var colors = app.MapGroup("/api/servers/{id}/terminal/colors");
+        colors.MapGet("", (string id, ShellColorsService service, CancellationToken ct) => service.Get(id, ct));
+        colors.MapPost("/enable", (string id, ShellColorsService service, CancellationToken ct) => service.Enable(id, ct));
+        colors.MapPost("/disable", (string id, ShellColorsService service, CancellationToken ct) => service.Disable(id, ct));
+    }
 
     private static async Task<IResult> Open(string id, int? cols, int? rows, HttpContext context, TerminalBridge bridge)
     {

@@ -1,8 +1,5 @@
 using System.Net;
 using System.Net.WebSockets;
-using System.Text;
-using System.Text.RegularExpressions;
-using Microsoft.AspNetCore.TestHost;
 using VpsPanel.Settings;
 using VpsPanel.Tests.Infrastructure;
 
@@ -11,8 +8,6 @@ namespace VpsPanel.Tests.Api;
 [Collection("ssh")]
 public sealed class TerminalEndpointsTests(SshServerFixture fixture) : IDisposable
 {
-    private static readonly TimeSpan Wait = TimeSpan.FromSeconds(10);
-
     private readonly TestApp _app = new();
 
     public void Dispose() => _app.Dispose();
@@ -24,18 +19,13 @@ public sealed class TerminalEndpointsTests(SshServerFixture fixture) : IDisposab
         return server;
     }
 
-    private async Task<TerminalClient> Connect(string serverId, string query = "", string origin = "http://localhost")
-    {
-        var client = _app.Server.CreateWebSocketClient();
-        client.ConfigureRequest = request => request.Headers.Origin = origin;
-        var socket = await client.ConnectAsync(new Uri($"ws://localhost/api/servers/{serverId}/terminal{query}"), CancellationToken.None);
-        return new TerminalClient(socket);
-    }
+    private Task<TerminalClient> Connect(string serverId, string query = "", string origin = "http://localhost") =>
+        TerminalClient.Connect(_app, serverId, query, origin);
 
     private static async Task<TerminalClient> Ready(Task<TerminalClient> connecting)
     {
         var terminal = await connecting;
-        (await terminal.ReceiveText()).Should().Be("""{"type":"ready","message":null}""");
+        await terminal.WaitReady();
         return terminal;
     }
 
@@ -100,7 +90,7 @@ public sealed class TerminalEndpointsTests(SshServerFixture fixture) : IDisposab
 
         // Assert
         var alive = true;
-        for (var deadline = DateTime.UtcNow + Wait; alive && DateTime.UtcNow < deadline; await Task.Delay(100))
+        for (var deadline = DateTime.UtcNow + TerminalClient.Wait; alive && DateTime.UtcNow < deadline; await Task.Delay(100))
             alive = (await fixture.Server.Run($"kill -0 {pid} 2>/dev/null && echo alive || true")).Trim() == "alive";
         alive.Should().BeFalse();
     }
@@ -132,60 +122,5 @@ public sealed class TerminalEndpointsTests(SshServerFixture fixture) : IDisposab
         // Assert
         (await act.Should().ThrowAsync<InvalidOperationException>())
             .WithMessage($"*{(int)HttpStatusCode.Forbidden}*");
-    }
-
-    private sealed class TerminalClient(WebSocket socket) : IDisposable
-    {
-        private readonly StringBuilder _output = new();
-
-        public WebSocket Socket => socket;
-
-        public Task Type(string text) =>
-            socket.SendAsync(Encoding.UTF8.GetBytes(text), WebSocketMessageType.Binary, true, CancellationToken.None);
-
-        public Task SendText(string text) =>
-            socket.SendAsync(Encoding.UTF8.GetBytes(text), WebSocketMessageType.Text, true, CancellationToken.None);
-
-        public async Task<string> ReceiveText()
-        {
-            var (type, data) = await Receive();
-            type.Should().Be(WebSocketMessageType.Text);
-            return data;
-        }
-
-        public async Task<Match> ReadUntil(string pattern)
-        {
-            Match match;
-            while (!(match = Regex.Match(_output.ToString(), pattern)).Success)
-            {
-                var (type, data) = await Receive();
-                type.Should().Be(WebSocketMessageType.Binary, $"the output so far: {_output}");
-                _output.Append(data);
-            }
-            return match;
-        }
-
-        public async Task ReadUntilClosed()
-        {
-            while ((await Receive()).Type != WebSocketMessageType.Close)
-            {
-            }
-        }
-
-        private async Task<(WebSocketMessageType Type, string Data)> Receive()
-        {
-            using var timeout = new CancellationTokenSource(Wait);
-            var buffer = new byte[16 * 1024];
-            using var message = new MemoryStream();
-            WebSocketReceiveResult result;
-            do
-            {
-                result = await socket.ReceiveAsync(buffer, timeout.Token);
-                message.Write(buffer, 0, result.Count);
-            } while (!result.EndOfMessage);
-            return (result.MessageType, Encoding.UTF8.GetString(message.ToArray()));
-        }
-
-        public void Dispose() => socket.Dispose();
     }
 }

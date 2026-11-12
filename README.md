@@ -13,7 +13,7 @@ The panel runs on your own computer, opens in the browser and talks to your serv
 - Reboots a server and waits until it comes back.
 - Streams the output of any command to the browser as it runs. If the connection drops, the output continues from where it stopped, and you can open a finished run later to read it again.
 - Lets you browse server files: open them, download a file or a whole folder as an archive, upload, delete, and copy to another server.
-- Opens a terminal on the server right in the browser. It is a regular interactive shell, so `top`, `vim`, `htop` and Tab completion work as usual. Ctrl+C with selected text copies it, otherwise it interrupts the command. Ctrl+V pastes. Closing the page ends the shell, and the commands running in it are interrupted.
+- Opens a terminal on the server right in the browser. It is a regular interactive shell, so `top`, `vim`, `htop` and Tab completion work as usual. Ctrl+C with selected text copies it, otherwise it interrupts the command. Ctrl+V pastes. Closing the page ends the shell, and the commands running in it are interrupted. The "Enable colors" button above the terminal adds a colored prompt and colored `ls` and `grep`. The panel adds a marked block to the end of `~/.bashrc`, so the colors work in a regular `ssh` session too. The old `.bashrc` goes to the backups, and "Disable colors" removes the block. This works when the login shell on the server is bash.
 - Has a built-in editor for configs and `.env` files (UTF-8 text up to 1 MB). It keeps line endings and the BOM as they were. Before every save the panel puts the previous version of the file into a backup on your computer. If someone changed the file on the server while you were editing it, the panel warns you.
 
 Command output in the runs panel:
@@ -133,7 +133,7 @@ Tests:
 dotnet test
 ```
 
-The backend is built with ASP.NET Core and [SSH.NET](https://github.com/sshnet/SSH.NET), the frontend with React, Mantine and CodeMirror.
+The backend is built with ASP.NET Core and [SSH.NET](https://github.com/sshnet/SSH.NET), the frontend with React, Mantine and CodeMirror. The terminal uses [xterm.js](https://xtermjs.org/).
 
 ## License
 
