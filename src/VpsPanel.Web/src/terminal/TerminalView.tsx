@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Box } from '@mantine/core';
 import { FitAddon } from '@xterm/addon-fit';
-import { Terminal } from '@xterm/xterm';
+import { Terminal, type ITheme } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 import { api } from '../api/endpoints';
 import { ui } from '../theme';
@@ -11,6 +11,31 @@ export type TerminalState = { status: 'connecting' } | { status: 'connected' } |
 type ServerMessage = { type: 'ready' } | { type: 'error'; message: string };
 
 const font = '"JetBrains Mono", monospace';
+
+// The default xterm colors are hard to read on the dark background, blue in particular.
+const colors: ITheme = {
+  background: ui.console,
+  foreground: '#E6E8EE',
+  cursor: '#E6E8EE',
+  cursorAccent: ui.console,
+  selectionBackground: '#3A4A80',
+  black: '#2A2E37',
+  red: '#E5484D',
+  green: '#2FB670',
+  yellow: '#E5A83A',
+  blue: '#6B84F6',
+  magenta: '#B47CF0',
+  cyan: '#2FB8A8',
+  white: '#C4C9D4',
+  brightBlack: '#727989',
+  brightRed: '#FF6B70',
+  brightGreen: '#5AD99A',
+  brightYellow: '#F5C451',
+  brightBlue: '#8EA2FF',
+  brightMagenta: '#CB9CFF',
+  brightCyan: '#63D9CB',
+  brightWhite: '#F4F5F8',
+};
 
 interface Props {
   serverId: string;
@@ -29,7 +54,7 @@ export function TerminalView({ serverId, onState }: Props) {
       fontSize: 14,
       cursorBlink: true,
       scrollback: 5000,
-      theme: { background: ui.console, foreground: '#E6E8EE' },
+      theme: colors,
     });
     const fit = new FitAddon();
     term.loadAddon(fit);
